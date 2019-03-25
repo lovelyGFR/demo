@@ -1,65 +1,76 @@
-/**
- * 以下所讲内容呢，只是一个示例
- */
-
-var express = require('express');
+var express = require("express");
 var app = express();
-var db = require('./models/init')
-var path = require('path')
-var session = require('express-session');
-// 引入connect-mongo用于express连接数据库存储session
-var mongoStore = require('connect-mongo')(session);
+var session = require("express-session");
+var router = require("./router/router.js");
+var captcha = require("./models/captcha.js");
+// var bodyParser = require('body-parser');
+var cors = require('cors');
 
-
-// 跨域问题
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*') // 第二个参数表示允许跨域的域名，* 代表所有域名
-  res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS') // 允许的 http 请求的方法
-  // 允许前台获得的除 Cache-Control、Content-Language、Content-Type、Expires、Last-Modified、Pragma 这几张基本响应头之外的响应头
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With')
-  if (req.method == 'OPTIONS') {
-    res.sendStatus(200)
-  } else {
-    next()
-  }
-})
 
 app.use(session({
-  //参数配置
-  secret: 'luckystar',//加密字符串 
-  name: 'userid',//返回客户端key的名称，默认为connect_sid 
-  resave: false,//强制保存session，即使它没有变化 
-  saveUninitialized: true,//强制将未初始化的session存储。当新建一个session且未设定属性或值时，它就处于未初始化状态。在设定cookie前，这对于登录验证，减轻服务器存储压力，权限控制是有帮助的，默认为true 
-  cookie: { maxAge: 50000 },
-  rolling: true, //在每次请求时进行设置cookie，将重置cookie过期时间 
-  store: new mongoStore({  //将session数据存储到mongo数据库中 
-
-    url: 'mongodb://127.0.0.1/session', //数据库地址 
-    touchAfter: 24 * 3600 //多长时间往数据库中更新存储一次，除了在会话数据上更改了某些数据除外
-
-  })
+    secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: true
 }));
 
-app.use(express.json());
 
-// 启动路由表
-var route = require('./router');
-app.use(route);
+app.use("/avatar",express.static("./avatar"));
+app.use("/imageWb",express.static("./imageWB"));
+app.use(cors());
+// // parse application/x-www-form-urlencoded
+// app.use(bodyParser.urlencoded({ extended: false }));
+// // parse application/json
+// app.use(bodyParser.json());
 
-// 界面渲染
-// 设置模板路径，默认为./views
-// express中支持的模版有.ejs和.jade，.ejs的和.html是一样的，只是.ejs是一个可以动态传值的模版，而html是一个静态页面。
-app.set('views', path.join('views'));
-app.engine('html', require('ejs').renderFile);
-app.set('view engine', 'html');
+//首页
+app.get("/",router.showIndex);
+//图片验证码
+app.get("/captcha",function(req,res){
+    captcha.getCaptcha(req,res);
+});
+//邮件验证码
+app.post("/sendCaptcha",router.sendCaptcha);
+//执行注册
+app.post("/doRegister",router.doRegister);
+//执行登陆
+app.post("/doLogin",router.doLogin);
+//注销
+app.get("/doLogout",router.doLogout);
+//展示个人信息
+app.get("/showInformation",router.showInformation);
+//执行修改
+app.post("/doEditInformation",router.doEditInformation);
+//发表说说
+app.post("/postShuoshuo",router.postShuoshuo);
+//删除说说
+app.post("/doDelete",router.doDelete);
+//转发说说
+app.post("/doRelay",router.doRelay);
+//关注
+app.get("/doFocus",router.doFocus);
+//点赞
+app.post("/doLike",router.doLike);
+//点赞榜
+app.get("/likeList",router.likeList);
+//转发榜
+app.get("/relayList",router.relayList);
+//评论
+app.post("/doComment",router.doComment);
+//收藏
+app.post("/doCollect",router.doCollect);
+// 查询评论
+app.post('/showComment',router.showComment);
 
-// 静态资源
-app.use(express.static(path.join(__dirname, 'public')));
+app.get('/myLike',router.myLike);
 
-// 连接服务器
-app.listen(3000, function () {
-  console.log("连接服务器成功");
-})
+app.get('/myCollection',router.myCollection);
 
-// 连接数据库
-db.connect();
+app.post('/uploadAvatar', router.uploadAvatar);
+
+app.post('/uploadImage',router.uploadImage);
+
+
+
+// app.post('/judgeLike', router.judgeLike);
+
+app.listen(3000);
